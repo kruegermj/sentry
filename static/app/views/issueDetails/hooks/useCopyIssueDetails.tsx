@@ -279,6 +279,32 @@ export const issueAndEventToMarkdown = ({
   const formatted = event?.formatted?.content;
   if (formatted) {
     llmFormattedMarkdownText += `\n${formatted}`;
+    if (autofixData) {
+      const sections = getOrderedAutofixSections(autofixData);
+      const rootCauseSection = sections.find(isRootCauseSection);
+      const solutionSection = sections.find(isSolutionSection);
+
+      const rootCauseArtifact = rootCauseSection
+        ? getAutofixArtifactFromSection(rootCauseSection)
+        : null;
+      const solutionArtifact = solutionSection
+        ? getAutofixArtifactFromSection(solutionSection)
+        : null;
+
+      const rootCauseCopyText = rootCauseArtifact
+        ? artifactToMarkdown(rootCauseArtifact, 2)
+        : null;
+      const solutionCopyText = solutionArtifact
+        ? artifactToMarkdown(solutionArtifact, 2)
+        : null;
+
+      if (rootCauseCopyText) {
+        llmFormattedMarkdownText += `\n${rootCauseCopyText}\n`;
+      }
+      if (solutionCopyText) {
+        llmFormattedMarkdownText += `\n${solutionCopyText}\n`;
+      }
+    }
     return llmFormattedMarkdownText;
   }
 
