@@ -266,6 +266,25 @@ export const issueAndEventToMarkdown = ({
   activeThreadId,
   organization,
 }: IssueAndEventToMarkdownOptions): string => {
+  // copy to markdown specific things
+  let llmFormattedMarkdownText = '';
+  llmFormattedMarkdownText += `**Issue ID:** ${group.id}\n`; // add issue id
+  if (group.project?.slug) {
+    llmFormattedMarkdownText += `**Project:** ${group.project?.slug}\n`; // project
+  }
+  if (event && typeof event.dateCreated === 'string') {
+    llmFormattedMarkdownText += `**Date:** ${new Date(event.dateCreated).toLocaleString()}\n`; // date
+  }
+
+  const formatted = event?.formatted?.content;
+  if (formatted) {
+    llmFormattedMarkdownText += `\n${formatted}`;
+    return llmFormattedMarkdownText;
+  }
+
+  // TODO: delete the rest of this when it is working
+  // also TODO: use a feature flag probably
+
   // Format the basic issue information
   let markdownText = `# ${group.title}\n\n`;
   markdownText += `**Issue ID:** ${group.id}\n`;
