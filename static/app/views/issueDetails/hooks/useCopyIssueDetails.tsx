@@ -256,7 +256,8 @@ interface IssueAndEventToMarkdownOptions {
   organization: Organization;
   activeThreadId?: number;
   autofixData?: ExplorerAutofixState | null;
-  event?: Event | null;
+  autofixFormatted?: string | null;
+  event?: Event | null; // add it to interface
 }
 
 export const issueAndEventToMarkdown = ({
@@ -265,6 +266,7 @@ export const issueAndEventToMarkdown = ({
   autofixData,
   activeThreadId,
   organization,
+  autofixFormatted,
 }: IssueAndEventToMarkdownOptions): string => {
   // copy to markdown specific things
   let llmFormattedMarkdownText = '';
@@ -279,31 +281,8 @@ export const issueAndEventToMarkdown = ({
   const formatted = event?.formatted?.content;
   if (formatted) {
     llmFormattedMarkdownText += `\n${formatted}`;
-    if (autofixData) {
-      const sections = getOrderedAutofixSections(autofixData);
-      const rootCauseSection = sections.find(isRootCauseSection);
-      const solutionSection = sections.find(isSolutionSection);
-
-      const rootCauseArtifact = rootCauseSection
-        ? getAutofixArtifactFromSection(rootCauseSection)
-        : null;
-      const solutionArtifact = solutionSection
-        ? getAutofixArtifactFromSection(solutionSection)
-        : null;
-
-      const rootCauseCopyText = rootCauseArtifact
-        ? artifactToMarkdown(rootCauseArtifact, 2)
-        : null;
-      const solutionCopyText = solutionArtifact
-        ? artifactToMarkdown(solutionArtifact, 2)
-        : null;
-
-      if (rootCauseCopyText) {
-        llmFormattedMarkdownText += `\n${rootCauseCopyText}\n`;
-      }
-      if (solutionCopyText) {
-        llmFormattedMarkdownText += `\n${solutionCopyText}\n`;
-      }
+    if (autofixFormatted) {
+      llmFormattedMarkdownText += `\n${autofixFormatted}`;
     }
     return llmFormattedMarkdownText;
   }
@@ -368,7 +347,9 @@ export const issueAndEventToMarkdown = ({
 export const useCopyIssueDetails = (group: Group, event?: Event) => {
   const organization = useOrganization();
 
-  const {runState: autofixData} = useExplorerAutofix(group.id, {enabled: false});
+  const {runState: autofixData, autofixFormatted} = useExplorerAutofix(group.id, {
+    enabled: false,
+  });
   const activeThreadId = useActiveThreadId();
 
   const text = useMemo(() => {
@@ -378,8 +359,9 @@ export const useCopyIssueDetails = (group: Group, event?: Event) => {
       autofixData,
       activeThreadId,
       organization,
+      autofixFormatted,
     });
-  }, [group, event, autofixData, activeThreadId, organization]);
+  }, [group, event, autofixData, activeThreadId, organization, autofixFormatted]);
 
   const {copy} = useCopyToClipboard();
 
