@@ -115,7 +115,9 @@ export function IssueEventNavigation({event, group}: IssueEventNavigationProps) 
   const activeThreadId = useActiveThreadId();
 
   // Get data for markdown copy functionality
-  const {runState: autofixData} = useExplorerAutofix(group.id, {enabled: false});
+  const {runState: autofixData, autofixFormatted} = useExplorerAutofix(group.id, {
+    enabled: false,
+  });
 
   const handleCopyMarkdown = useCallback(() => {
     const markdownText = issueAndEventToMarkdown({
@@ -124,6 +126,7 @@ export function IssueEventNavigation({event, group}: IssueEventNavigationProps) 
       autofixData,
       activeThreadId,
       organization,
+      autofixFormatted,
     });
 
     trackAnalytics('issue_details.copy_issue_details_as_markdown', {
@@ -134,7 +137,7 @@ export function IssueEventNavigation({event, group}: IssueEventNavigationProps) 
     });
 
     return markdownText;
-  }, [activeThreadId, event, group, autofixData, organization]);
+  }, [activeThreadId, event, group, autofixData, organization, autofixFormatted]);
 
   return (
     <EventNavigationWrapper role="navigation" ref={navigationRef}>

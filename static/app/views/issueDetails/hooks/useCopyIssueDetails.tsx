@@ -282,7 +282,7 @@ export const issueAndEventToMarkdown = ({
   if (formatted) {
     llmFormattedMarkdownText += `\n${formatted}`;
     if (autofixFormatted) {
-      llmFormattedMarkdownText += `\n${autofixFormatted}`;
+      llmFormattedMarkdownText += `\n\n${autofixFormatted}`;
     }
     return llmFormattedMarkdownText;
   }
