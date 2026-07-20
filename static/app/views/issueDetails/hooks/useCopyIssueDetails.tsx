@@ -284,9 +284,6 @@ export const issueAndEventToMarkdown = ({
     return llmMarkdown;
   }
 
-  // TODO: delete the rest of this when it is working
-  // also TODO: use a feature flag probably
-
   // Format the basic issue information
   let markdownText = `# ${group.title}\n\n`;
   markdownText += `**Issue ID:** ${group.id}\n`;
