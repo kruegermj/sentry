@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import logging
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from django.contrib.auth.models import AnonymousUser
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -39,6 +39,7 @@ from sentry.constants import CELL_API_DEPRECATION_DATE
 from sentry.exceptions import InvalidParams, InvalidSearchQuery
 from sentry.issues.endpoints.bases.group import GroupEndpoint
 from sentry.issues.endpoints.project_event_details import wrap_event_response
+from sentry.issues.formatting.formatter import FormattedResponse
 from sentry.issues.formatting.mixin import FormattableResponseMixin, format_event_response
 from sentry.issues.grouptype import GroupCategory
 from sentry.models.environment import Environment
@@ -126,6 +127,17 @@ def issue_search_query_to_conditions(
     return snql_conditions, resolved_legacy_conditions
 
 
+class _GroupEventDetailsFormattedResponseOptional(TypedDict, total=False):
+    # present only when ``?llmFormat`` is requested and the formatter option is on
+    formatted: FormattedResponse
+
+
+class GroupEventDetailsFormattedResponse(
+    GroupEventDetailsResponse, _GroupEventDetailsFormattedResponseOptional
+):
+    pass
+
+
 @extend_schema(tags=["Events"])
 @cell_silo_endpoint
 class GroupEventDetailsEndpoint(FormattableResponseMixin, GroupEndpoint):
@@ -167,7 +179,7 @@ class GroupEventDetailsEndpoint(FormattableResponseMixin, GroupEndpoint):
         ],
         responses={
             200: inline_sentry_response_serializer(
-                "IssueEventDetailsResponse", GroupEventDetailsResponse
+                "IssueEventDetailsResponse", GroupEventDetailsFormattedResponse
             ),
             400: RESPONSE_BAD_REQUEST,
             401: RESPONSE_UNAUTHORIZED,
@@ -184,7 +196,7 @@ class GroupEventDetailsEndpoint(FormattableResponseMixin, GroupEndpoint):
     def get(
         self, request: Request, group: Group, event_id: str
     ) -> (
-        Response[GroupEventDetailsResponse]
+        Response[GroupEventDetailsFormattedResponse]
         | Response[EventSerializerResponse]
         | Response[DetailResponse]
     ):
@@ -286,4 +298,4 @@ class GroupEventDetailsEndpoint(FormattableResponseMixin, GroupEndpoint):
         )
         if data is None:
             return Response({"detail": "Failed to load event"}, status=500)
-        return Response(data)
+        return Response(cast(GroupEventDetailsFormattedResponse, data))

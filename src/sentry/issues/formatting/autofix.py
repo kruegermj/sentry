@@ -1,7 +1,5 @@
 """Renders a serialized autofix (Seer Issue Fix) state response into text, reusing the shared
-formatter primitives. Delivered over REST via ``FormattableResponseMixin`` on the autofix
-endpoint; mirrors the root-cause / solution / pull-request output that the MCP server and the
-issue-details UI each build today, so those consumers can share one implementation.
+formatter primitives. Delivered over REST via ``FormattableResponseMixin`` on the autofix endpoint.
 """
 
 from __future__ import annotations
@@ -18,9 +16,8 @@ def _artifacts(autofix: Mapping[str, Any]) -> dict[str, Any]:
     """
     result: dict[str, Any] = {}
     for block in autofix.get("blocks") or []:
-        for artifact in block.get("artifacts") or []:  # not every block has artifacts
-            if artifact.get("data") is not None:
-                result[artifact["key"]] = artifact["data"]
+        for artifact in block.get("artifacts") or []:
+            result[artifact["key"]] = artifact.get("data")
     return result
 
 
@@ -46,7 +43,7 @@ def _solution(data: Any, fmt: Formatter) -> str:
     if data.get("one_line_summary"):
         parts.append(data["one_line_summary"])
     steps = [
-        f"- **{step.get('title', '')}**: {step.get('description', '')}"
+        fmt.field(step.get("title") or "Step", step.get("description") or "")
         for step in data.get("steps") or []
     ]
     if steps:

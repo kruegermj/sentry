@@ -4,6 +4,8 @@ from typing import Annotated, Any, Literal, TypedDict, Union
 
 from pydantic import BaseModel, Field
 
+from sentry.issues.formatting.formatter import FormattedResponse
+
 
 class GithubAppPermissionsWarning(BaseModel):
     """The GitHub App installation backing a touched repo is missing permissions
@@ -36,7 +38,12 @@ class AutofixHandoffResponse(TypedDict):
     failures: list[dict[str, Any]]
 
 
-class AutofixStateResponse(TypedDict):
+class _AutofixStateResponseOptional(TypedDict, total=False):
+    # present only when ``?llmFormat`` is requested and the formatter option is on
+    formatted: FormattedResponse
+
+
+class AutofixStateResponse(_AutofixStateResponseOptional):
     """Response type for the GET endpoint"""
 
     autofix: dict[str, Any] | None
