@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from sentry.issues.formatting.formatter import MarkdownFormatter, XmlFormatter
+from sentry.issues.formatting.formatter import MarkdownFormatter, SectionFn, XmlFormatter
 from sentry.issues.formatting.limits import LIMITS_DEFAULT
 from sentry.issues.formatting.models import (
     Breadcrumb,
@@ -250,10 +250,6 @@ def test_contexts_renders_groups_and_skips_type() -> None:
     assert "type:" not in out  # the redundant per-context type key is dropped
 
 
-def test_contexts_empty_renders_nothing() -> None:
-    assert contexts_section(EventObject(title="t"), MD, LIMITS_DEFAULT) == ""
-
-
 def test_csp_section() -> None:
     event = EventObject(
         title="t",
@@ -268,10 +264,6 @@ def test_csp_section() -> None:
     assert "**Document:** https://x.com" in out
 
 
-def test_csp_none_renders_nothing() -> None:
-    assert csp_section(EventObject(title="t"), MD, LIMITS_DEFAULT) == ""
-
-
 def test_evidence_section() -> None:
     event = EventObject(
         title="t",
@@ -283,8 +275,9 @@ def test_evidence_section() -> None:
     assert "**Transaction:** POST /oauth/token" in out
 
 
-def test_evidence_empty_renders_nothing() -> None:
-    assert evidence_section(EventObject(title="t"), MD, LIMITS_DEFAULT) == ""
+@pytest.mark.parametrize("section", [csp_section, evidence_section, contexts_section])
+def test_section_empty_renders_nothing(section: SectionFn) -> None:
+    assert section(EventObject(title="t"), MD, LIMITS_DEFAULT) == ""
 
 
 def test_threads_only_with_stacktrace() -> None:
