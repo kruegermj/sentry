@@ -63,7 +63,6 @@ from sentry.testutils.cases import (
     SpanTestCase,
     TraceMetricsTestCase,
 )
-from sentry.testutils.helpers import override_options
 from sentry.testutils.helpers.datetime import before_now
 from sentry.types.activity import ActivityType
 from sentry.utils.dates import parse_stats_period
@@ -2567,7 +2566,7 @@ class TestGetEventDetails(
     def test_format_returns_shared_formatter_output(self) -> None:
         event = self._make_error_event()
 
-        with override_options({"issues.standardized-markdown-for-llm": True}):
+        with self.feature("organizations:issue-standardized-markdown-for-llm"):
             result = get_event_details(
                 organization_id=self.organization.id,
                 event_id=event.event_id,
@@ -2613,7 +2612,7 @@ class TestGetEventDetails(
         }
         event = self.store_event(data=data, project_id=self.project.id)
 
-        with override_options({"issues.standardized-markdown-for-llm": True}):
+        with self.feature("organizations:issue-standardized-markdown-for-llm"):
             with_crumbs = get_event_details(
                 organization_id=self.organization.id,
                 event_id=event.event_id,
