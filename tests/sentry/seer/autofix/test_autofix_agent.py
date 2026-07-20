@@ -501,6 +501,108 @@ class TestTriggerAutofixAgent(TestCase):
     @patch("sentry.quotas.backend.record_seer_run")
     @patch("sentry.quotas.backend.check_seer_quota", return_value=True)
     @patch("sentry.seer.autofix.autofix_agent.broadcast_webhooks_for_organization.delay")
+    @patch("sentry.seer.autofix_rca.dispatch.trigger_autofix_rca_feature")
+    @patch("sentry.seer.autofix.autofix_agent.SeerAgentClient")
+    def test_root_cause_routes_to_rca_feature_when_flagged(
+        self, mock_client_class, mock_feature, mock_broadcast, mock_check_quota, mock_record_run
+    ):
+        """With the flag on, a new root-cause run dispatches the autofix_rca feature
+        instead of a legacy explorer run, still emits the started webhook, and
+        returns the feature run's id."""
+        feature_run = self.create_seer_run(
+            organization=self.group.organization, type="feature_run", seer_run_state_id=777
+        )
+        mock_feature.return_value = feature_run
+
+        with self.feature("organizations:autofix-rca-in-seer"):
+            result = trigger_autofix_agent(
+                group=self.group,
+                step=AutofixStep.ROOT_CAUSE,
+                referrer=AutofixReferrer.UNKNOWN,
+                run_id=None,
+            )
+
+        assert result == 777
+        mock_feature.assert_called_once()
+        assert mock_feature.call_args.args[0] == self.group
+        # legacy explorer run is not started for a flagged root-cause kickoff
+        mock_client_class.return_value.start_run.assert_not_called()
+        # the started webhook still fires, pointing at the feature run
+        mock_broadcast.assert_called_once()
+        payload = mock_broadcast.call_args.kwargs["payload"]
+        assert (
+            mock_broadcast.call_args.kwargs["event_name"] == SeerActionType.ROOT_CAUSE_STARTED.value
+        )
+        assert payload["run_id"] == 777
+        assert payload["sentry_run_id"] == str(feature_run.uuid)
+
+    @patch("sentry.quotas.backend.record_seer_run")
+    @patch("sentry.quotas.backend.check_seer_quota", return_value=True)
+    @patch("sentry.seer.autofix_rca.dispatch.trigger_autofix_rca_feature")
+    @patch("sentry.seer.autofix.autofix_agent.SeerAgentClient")
+    def test_solution_step_does_not_route_to_rca_feature(
+        self, mock_client_class, mock_feature, mock_check_quota, mock_record_run
+    ):
+        """Only the root-cause step routes; solution kickoffs stay on the legacy flow."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        mock_client.start_run.return_value = MagicMock(seer_run_state_id=5)
+
+        with self.feature("organizations:autofix-rca-in-seer"):
+            trigger_autofix_agent(
+                group=self.group,
+                step=AutofixStep.SOLUTION,
+                referrer=AutofixReferrer.UNKNOWN,
+                run_id=None,
+            )
+
+        mock_feature.assert_not_called()
+        mock_client.start_run.assert_called_once()
+
+    @patch("sentry.quotas.backend.record_seer_run")
+    @patch("sentry.quotas.backend.check_seer_quota", return_value=True)
+    @patch("sentry.seer.autofix_rca.dispatch.trigger_autofix_rca_feature")
+    @patch("sentry.seer.autofix.autofix_agent.SeerAgentClient")
+    def test_root_cause_uses_legacy_flow_without_flag(
+        self, mock_client_class, mock_feature, mock_check_quota, mock_record_run
+    ):
+        """Without the flag, root-cause kickoffs use the legacy explorer run."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        mock_client.start_run.return_value = MagicMock(seer_run_state_id=9)
+
+        result = trigger_autofix_agent(
+            group=self.group,
+            step=AutofixStep.ROOT_CAUSE,
+            referrer=AutofixReferrer.UNKNOWN,
+            run_id=None,
+        )
+
+        assert result == 9
+        mock_feature.assert_not_called()
+        mock_client.start_run.assert_called_once()
+
+    @patch("sentry.quotas.backend.check_seer_quota", return_value=False)
+    @patch("sentry.seer.autofix_rca.dispatch.trigger_autofix_rca_feature")
+    @patch("sentry.seer.autofix.autofix_agent.SeerAgentClient")
+    def test_flagged_root_cause_still_enforces_quota(
+        self, mock_client_class, mock_feature, mock_check_quota
+    ):
+        """The upstream quota check runs before routing to the feature."""
+        with self.feature("organizations:autofix-rca-in-seer"):
+            with pytest.raises(NoSeerQuotaException):
+                trigger_autofix_agent(
+                    group=self.group,
+                    step=AutofixStep.ROOT_CAUSE,
+                    referrer=AutofixReferrer.UNKNOWN,
+                    run_id=None,
+                )
+
+        mock_feature.assert_not_called()
+
+    @patch("sentry.quotas.backend.record_seer_run")
+    @patch("sentry.quotas.backend.check_seer_quota", return_value=True)
+    @patch("sentry.seer.autofix.autofix_agent.broadcast_webhooks_for_organization.delay")
     @patch("sentry.seer.autofix.autofix_agent.SeerAgentClient")
     def test_trigger_autofix_agent_metadata_omits_group_id(
         self, mock_client_class, mock_broadcast, mock_check_quota, mock_record_run
