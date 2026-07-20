@@ -16,7 +16,6 @@ from sentry.seer.autofix.github_perms import MissingGithubPermissions
 from sentry.seer.autofix.utils import AutofixStoppingPoint
 from sentry.seer.models import SeerPermissionError
 from sentry.testutils.cases import APITestCase, SnubaTestCase
-from sentry.testutils.helpers import override_options
 from sentry.testutils.helpers.features import with_feature
 from sentry.testutils.skips import requires_snuba
 
@@ -103,7 +102,7 @@ class GroupAutofixEndpointTest(APITestCase, SnubaTestCase):
         )
 
         self.login_as(user=self.user)
-        with override_options({"issues.standardized-markdown-for-llm": True}):
+        with self.feature("organizations:issue-standardized-markdown-for-llm"):
             response = self.client.get(
                 self._get_url(group.id) + "?llmFormat=markdown", format="json"
             )
