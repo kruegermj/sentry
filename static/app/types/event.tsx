@@ -803,7 +803,7 @@ interface EventBase {
     version: string | null;
   } | null;
   sdkUpdates?: SDKUpdatesSuggestion[];
-  userReport?: UserReport | null; // add to eventBase so it knows it can receive formatted
+  userReport?: UserReport | null;
 }
 
 interface TraceEventContexts extends EventContexts {

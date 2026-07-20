@@ -198,7 +198,6 @@ export function useEnvironmentsFromUrl(): string[] {
 }
 
 function getGroupEventDetailsQueryData({
-  // this is where the frontend gets its data to display
   environments,
   query,
   start,
@@ -213,7 +212,7 @@ function getGroupEventDetailsQueryData({
 }): Record<string, string | string[]> {
   const params: Record<string, string | string[]> = {
     collapse: ['fullRelease'],
-    llmFormat: 'markdown', // adding llmformat here so it gets the markdown
+    llmFormat: 'markdown',
   };
 
   if (query) {

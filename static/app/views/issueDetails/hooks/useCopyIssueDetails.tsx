@@ -257,7 +257,7 @@ interface IssueAndEventToMarkdownOptions {
   activeThreadId?: number;
   autofixData?: ExplorerAutofixState | null;
   autofixFormatted?: string | null;
-  event?: Event | null; // add it to interface
+  event?: Event | null;
 }
 
 export const issueAndEventToMarkdown = ({
@@ -268,23 +268,20 @@ export const issueAndEventToMarkdown = ({
   organization,
   autofixFormatted,
 }: IssueAndEventToMarkdownOptions): string => {
-  // copy to markdown specific things
-  let llmFormattedMarkdownText = '';
-  llmFormattedMarkdownText += `**Issue ID:** ${group.id}\n`; // add issue id
-  if (group.project?.slug) {
-    llmFormattedMarkdownText += `**Project:** ${group.project?.slug}\n`; // project
-  }
-  if (event && typeof event.dateCreated === 'string') {
-    llmFormattedMarkdownText += `**Date:** ${new Date(event.dateCreated).toLocaleString()}\n`; // date
-  }
-
   const formatted = event?.formatted?.content;
   if (formatted) {
-    llmFormattedMarkdownText += `\n${formatted}`;
-    if (autofixFormatted) {
-      llmFormattedMarkdownText += `\n\n${autofixFormatted}`;
+    let llmMarkdown = `**Issue ID:** ${group.id}\n`;
+    if (group.project?.slug) {
+      llmMarkdown += `**Project:** ${group.project.slug}\n`;
     }
-    return llmFormattedMarkdownText;
+    if (typeof event?.dateCreated === 'string') {
+      llmMarkdown += `**Date:** ${new Date(event.dateCreated).toLocaleString()}\n`;
+    }
+    llmMarkdown += `\n${formatted}`;
+    if (autofixFormatted) {
+      llmMarkdown += `\n\n${autofixFormatted}`;
+    }
+    return llmMarkdown;
   }
 
   // TODO: delete the rest of this when it is working

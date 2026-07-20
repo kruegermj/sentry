@@ -161,7 +161,7 @@ export interface ExplorerAutofixState {
  */
 interface ExplorerAutofixResponse {
   autofix: ExplorerAutofixState | null;
-  formatted?: {content: string; format: string}; // add formatted to response
+  formatted?: {content: string; format: string};
 }
 
 const POLL_INTERVAL = 1000;
@@ -171,7 +171,7 @@ function explorerAutofixApiOptions(orgSlug: string, groupId: string) {
     '/organizations/$organizationIdOrSlug/issues/$issueId/autofix/',
     {
       path: {organizationIdOrSlug: orgSlug, issueId: groupId},
-      query: {mode: 'explorer', llmFormat: 'markdown'}, // add markdown as an option
+      query: {mode: 'explorer', llmFormat: 'markdown'},
       staleTime: 0,
     }
   );
