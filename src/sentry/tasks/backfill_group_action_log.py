@@ -191,7 +191,8 @@ def _backfill_project(
     cursor_id: int = 0,
     activation_id: str | None = None,
 ) -> None:
-    from sentry.issues.derived.tasks import process_project_derived_data
+    from sentry.issues.derived.tasks import generate_project_derived_data
+    from sentry.issues.models.groupderiveddata import GroupDerivedData
 
     batch_size: int = options.get("issues.backfill_group_action_log.batch_size")
     inter_batch_delay_s: int = options.get("issues.backfill_group_action_log.inter_batch_delay_s")
@@ -219,7 +220,7 @@ def _backfill_project(
             "backfill_group_action_log.project_completed",
             extra={"project_id": project.id},
         )
-        process_project_derived_data.delay(project_id=project.id)
+        generate_project_derived_data.delay(project_id=project.id, stale_only=True)
         return
 
     logger.info(
@@ -237,6 +238,7 @@ def _backfill_project(
     skipped_count = 0
     error_count = 0
     num_entries = 0
+    backfilled_group_ids: set[int] = set()
 
     for activity in activities:
         try:
@@ -257,6 +259,7 @@ def _backfill_project(
         else:
             actor = SYSTEM_ACTOR
 
+        backfilled_group_ids.add(activity.group_id)
         params.extend(
             [
                 activity.group_id,
@@ -274,6 +277,11 @@ def _backfill_project(
         num_entries += 1
 
     converted_count = bulk_insert_action_log_entries(params, num_entries)
+
+    if backfilled_group_ids:
+        GroupDerivedData.objects.filter(group_id__in=backfilled_group_ids).update(
+            pipeline_hash=None
+        )
 
     metrics.incr(
         "issues.backfill_group_action_log.activities_converted",
@@ -321,4 +329,4 @@ def _backfill_project(
             "backfill_group_action_log.project_completed",
             extra={"project_id": project.id},
         )
-        process_project_derived_data.delay(project_id=project.id)
+        generate_project_derived_data.delay(project_id=project.id, stale_only=True)
