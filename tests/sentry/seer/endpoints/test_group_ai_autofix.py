@@ -4,8 +4,6 @@ from unittest.mock import ANY, Mock, patch
 from sentry.integrations.services.integration import RpcIntegration
 from sentry.issues.action_log.types import GroupActionActor, TriggerAutofixAction
 from sentry.models.activity import Activity
-from sentry.seer.agent.client_models import MemoryBlock, Message, RepoPRState, SeerRunState
-from sentry.issues.action_log.types import TriggerAutofixAction
 from sentry.seer.agent.client_models import (
     Artifact,
     MemoryBlock,
