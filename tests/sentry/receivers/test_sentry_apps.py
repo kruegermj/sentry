@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from sentry.constants import SentryAppInstallationStatus
+from sentry.integrations.models.external_issue import ExternalIssue
 from sentry.issues.escalating.escalating import manage_issue_states
 from sentry.issues.ongoing import bulk_transition_group_to_ongoing
 from sentry.models.activity import Activity
@@ -13,6 +14,9 @@ from sentry.models.groupinbox import GroupInboxReason
 from sentry.models.grouplink import GroupLink
 from sentry.models.release import Release
 from sentry.models.repository import Repository
+from sentry.sentry_apps.models.platformexternalissue import PlatformExternalIssue
+from sentry.sentry_apps.models.sentry_app_installation import SentryAppInstallation
+from sentry.signals import BetterSignal, external_issue_created, external_issue_linked
 from sentry.silo.base import SiloMode
 from sentry.testutils.cases import APITestCase
 from sentry.testutils.silo import assume_test_silo_mode
@@ -21,6 +25,7 @@ from sentry.testutils.silo import assume_test_silo_mode
 # Issues and kick off side effects are just chillin in the endpoint code -_-
 from sentry.types.activity import ActivityType
 from sentry.types.group import GroupSubStatus
+from sentry.users.models.user import User
 
 
 @patch("sentry.sentry_apps.tasks.sentry_apps.workflow_notification.delay")
@@ -397,3 +402,133 @@ class TestIssueWorkflowNotificationsForExactSubscription(APITestCase):
             user_id=self.user.id,
             data={},
         )
+
+
+@patch("sentry.sentry_apps.tasks.sentry_apps.build_external_issue_webhook.delay")
+class TestExternalIssueWebhooks(APITestCase):
+    def setUp(self) -> None:
+        self.issue = self.create_group(project=self.project)
+        self.integration = self.create_integration(
+            organization=self.organization, provider="example", external_id="123"
+        )
+        self.external_issue = self.create_integration_external_issue(
+            group=self.issue, integration=self.integration, key="APP-123"
+        )
+
+    def install_app(self, events: list[str]) -> SentryAppInstallation:
+        sentry_app = self.create_sentry_app(organization=self.organization, events=events)
+        return self.create_sentry_app_installation(
+            organization=self.organization, slug=sentry_app.slug
+        )
+
+    def fire(
+        self,
+        signal: BetterSignal,
+        external_issue: ExternalIssue | PlatformExternalIssue,
+        user: User | None = None,
+        rule_label: str | None = None,
+    ) -> None:
+        signal.send_robust(
+            project=self.project,
+            group=self.issue,
+            user=user,
+            external_issue=external_issue,
+            rule_label=rule_label,
+            sender=self.__class__,
+        )
+
+    def test_notifies_on_created(self, delay: MagicMock) -> None:
+        install = self.install_app(["issue.external_issue_created"])
+
+        self.fire(external_issue_created, self.external_issue, user=self.user)
+
+        delay.assert_called_once_with(
+            installation_id=install.id,
+            issue_id=self.issue.id,
+            type="issue.external_issue_created",
+            user_id=self.user.id,
+            external_issue_id=self.external_issue.id,
+            external_issue_kind="integration",
+            rule_label=None,
+        )
+
+    def test_notifies_on_linked(self, delay: MagicMock) -> None:
+        install = self.install_app(["issue.external_issue_linked"])
+
+        self.fire(external_issue_linked, self.external_issue, user=self.user)
+
+        delay.assert_called_once_with(
+            installation_id=install.id,
+            issue_id=self.issue.id,
+            type="issue.external_issue_linked",
+            user_id=self.user.id,
+            external_issue_id=self.external_issue.id,
+            external_issue_kind="integration",
+            rule_label=None,
+        )
+
+    def test_subscribing_to_the_issue_resource_covers_both_events(self, delay: MagicMock) -> None:
+        install = self.install_app(["issue"])
+
+        for signal in (external_issue_created, external_issue_linked):
+            self.fire(signal, self.external_issue, user=self.user)
+
+        assert [c.kwargs["type"] for c in delay.call_args_list] == [
+            "issue.external_issue_created",
+            "issue.external_issue_linked",
+        ]
+        assert {c.kwargs["installation_id"] for c in delay.call_args_list} == {install.id}
+
+    def test_skips_app_subscribed_to_other_issue_events(self, delay: MagicMock) -> None:
+        self.install_app(["issue.resolved"])
+
+        self.fire(external_issue_created, self.external_issue, user=self.user)
+
+        assert not delay.called
+
+    def test_no_user_when_a_rule_created_the_ticket(self, delay: MagicMock) -> None:
+        install = self.install_app(["issue.external_issue_created"])
+
+        self.fire(external_issue_created, self.external_issue, rule_label="My rule")
+
+        delay.assert_called_once_with(
+            installation_id=install.id,
+            issue_id=self.issue.id,
+            type="issue.external_issue_created",
+            user_id=None,
+            external_issue_id=self.external_issue.id,
+            external_issue_kind="integration",
+            rule_label="My rule",
+        )
+
+    def test_marks_a_custom_integration_issue_as_platform(self, delay: MagicMock) -> None:
+        install = self.install_app(["issue.external_issue_created"])
+        platform_issue = self.create_platform_external_issue(
+            group=self.issue,
+            service_type="my-app",
+            display_name="app#123",
+            web_url="https://example.com/issues/123",
+        )
+
+        self.fire(external_issue_created, platform_issue, user=self.user)
+
+        delay.assert_called_once_with(
+            installation_id=install.id,
+            issue_id=self.issue.id,
+            type="issue.external_issue_created",
+            user_id=self.user.id,
+            external_issue_id=platform_issue.id,
+            external_issue_kind="platform",
+            rule_label=None,
+        )
+
+    def test_respects_the_installation_project_filter(self, delay: MagicMock) -> None:
+        install = self.install_app(["issue.external_issue_created"])
+        other_project = self.create_project(organization=self.organization)
+        self.create_service_hook_project_for_installation(
+            installation_id=install.id, project_id=other_project.id
+        )
+
+        self.fire(external_issue_created, self.external_issue, user=self.user)
+
+        delay.assert_not_called()

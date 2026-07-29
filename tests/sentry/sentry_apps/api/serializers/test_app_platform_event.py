@@ -5,6 +5,7 @@ import orjson
 
 from sentry.sentry_apps.api.serializers.app_platform_event import AppPlatformEvent
 from sentry.sentry_apps.models.sentry_app import MASKED_VALUE, SentryApp
+from sentry.sentry_apps.services.app import app_service
 from sentry.sentry_apps.utils.webhooks import (
     ErrorActionType,
     InstallationActionType,
@@ -55,12 +56,14 @@ class AppPlatformEventSerializerTest(TestCase):
         assert result.headers["Sentry-Hook-Signature"] == signature
 
     def test_sentry_app_actor(self) -> None:
+        actor = app_service.get_sentry_app_by_id(id=self.sentry_app.id)
+        assert actor is not None
         result = AppPlatformEvent[dict[str, Any]](
             resource=SentryAppResourceType.ISSUE,
             action=IssueActionType.ASSIGNED,
             install=self.install,
             data={},
-            actor=self.sentry_app.proxy_user,
+            actor=actor,
         )
 
         assert orjson.loads(result.body)["actor"] == {

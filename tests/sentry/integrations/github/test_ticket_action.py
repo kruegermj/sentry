@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import responses
@@ -51,6 +51,7 @@ class GitHubTicketRulesTestCase(RuleTestCase, BaseAPITestCase):
         )
 
         self.login_as(user=self.user)
+
         responses.add(
             method=responses.POST,
             url="https://api.github.com/app/installations/1/access_tokens",
@@ -79,10 +80,16 @@ class GitHubTicketRulesTestCase(RuleTestCase, BaseAPITestCase):
         )[0]
 
     @responses.activate()
-    def test_ticket_rules(self) -> None:
+    @patch("sentry.sentry_apps.tasks.sentry_apps.build_external_issue_webhook.delay")
+    def test_ticket_rules(self, build_external_issue_webhook: MagicMock) -> None:
         title = "sample title"
         sample_description = "sample bug report"
         html_url = f"https://github.com/foo/bar/issues/{self.issue_num}"
+
+        sentry_app = self.create_sentry_app(
+            organization=self.organization, events=["issue.external_issue_created"]
+        )
+        self.create_sentry_app_installation(organization=self.organization, slug=sentry_app.slug)
 
         with assume_test_silo_mode(SiloMode.CELL):
             Repository.objects.create(
@@ -162,6 +169,13 @@ class GitHubTicketRulesTestCase(RuleTestCase, BaseAPITestCase):
             provider="github",
         )
 
+        build_external_issue_webhook.assert_called_once()
+        sentry_app_call = build_external_issue_webhook.call_args
+        assert sentry_app_call.kwargs["type"] == "issue.external_issue_created"
+        assert sentry_app_call.kwargs["issue_id"] == event.group_id
+        assert sentry_app_call.kwargs["user_id"] is None
+        assert sentry_app_call.kwargs["rule_label"] == rule_object.label
+
         # assert ticket created in DB
         key = self.get_key(event)
         assert key == f"{self.repo}#{self.issue_num}"
@@ -192,6 +206,7 @@ class GitHubTicketRulesTestCase(RuleTestCase, BaseAPITestCase):
         self.trigger(event, rule_object)
 
         # assert new ticket NOT created in DB
+        build_external_issue_webhook.assert_called_once()
         assert ExternalIssue.objects.count() == external_issue_count
         assert (
             Activity.objects.filter(
