@@ -582,6 +582,30 @@ describe('Onboarding', () => {
       );
     });
 
+    it('preserves messaging setup when returning to the welcome step', async () => {
+      const messagingSetup = {
+        mode: 'selected' as const,
+        providerKey: 'slack' as const,
+        integrationId: '15',
+        channelId: 'C123',
+      };
+
+      renderOnboarding('welcome', {
+        initialContext: {
+          selectedPlatform: nextJsPlatform,
+          selectedFeatures: [ProductSolution.ERROR_MONITORING],
+          messagingSetup,
+        },
+      });
+
+      await waitFor(() => {
+        const stored = JSON.parse(sessionStorage.getItem('onboarding') ?? '{}');
+        expect(stored.selectedPlatform).toBeUndefined();
+        expect(stored.selectedFeatures).toBeUndefined();
+        expect(stored.messagingSetup).toEqual(messagingSetup);
+      });
+    });
+
     it('fires scm_welcome_continue_clicked on start click and not the legacy event', async () => {
       renderOnboarding('welcome');
 

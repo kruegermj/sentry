@@ -143,9 +143,15 @@ export function useScmMessagingSetupValidation({
       (integrationsQuery.isError || (integration !== undefined && channelsQuery.isError)),
     isPending:
       hasSelectedDestination &&
-      (integrationsQuery.isPending ||
-        (integration !== undefined && channelsQuery.isPending)),
-    isValid: hasSelectedDestination && channel !== undefined,
+      (integrationsQuery.isFetching ||
+        (integration !== undefined && channelsQuery.isFetching)),
+    isValid:
+      hasSelectedDestination &&
+      integrationsQuery.isSuccess &&
+      !integrationsQuery.isFetching &&
+      channelsQuery.isSuccess &&
+      !channelsQuery.isFetching &&
+      channel !== undefined,
     staleReason,
   };
 }

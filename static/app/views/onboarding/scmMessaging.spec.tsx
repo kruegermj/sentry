@@ -1,9 +1,13 @@
+import {QueryClientProvider} from '@tanstack/react-query';
 import {OrganizationIntegrationsFixture} from 'sentry-fixture/organizationIntegrations';
 
+import {makeTestQueryClient} from 'sentry-test/queryClient';
 import {render, screen, waitFor} from 'sentry-test/reactTestingLibrary';
 
 import type {ScmMessagingSetup} from 'sentry/components/onboarding/scm/scmMessagingSetup';
+import type {OrganizationIntegration} from 'sentry/types/integrations';
 import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
+import {apiOptions} from 'sentry/utils/api/apiOptions';
 
 import {ScmMessaging} from './scmMessaging';
 
@@ -106,5 +110,62 @@ describe('ScmMessaging', () => {
     ).toBeInTheDocument();
     expect(onMessagingSetupChange).toHaveBeenCalledWith({mode: 'unconfigured'});
     expect(screen.queryByText('Destination selected')).not.toBeInTheDocument();
+  });
+
+  it('does not trust a cached destination while revalidating it', async () => {
+    const queryClient = makeTestQueryClient();
+    const integration = OrganizationIntegrationsFixture({id: '15'});
+    const channel = {id: 'C123', name: 'alerts', display: '#alerts', type: 'text'};
+    const integrationsOptions = apiOptions.as<OrganizationIntegration[]>()(
+      '/organizations/$organizationIdOrSlug/integrations/',
+      {
+        path: {organizationIdOrSlug: 'org-slug'},
+        query: {integrationType: 'messaging'},
+        staleTime: 0,
+      }
+    );
+    const channelsOptions = apiOptions.as<{results: Array<typeof channel>}>()(
+      '/organizations/$organizationIdOrSlug/integrations/$integrationId/channels/',
+      {
+        path: {organizationIdOrSlug: 'org-slug', integrationId: '15'},
+        staleTime: 0,
+      }
+    );
+    queryClient.setQueryData(integrationsOptions.queryKey, {
+      json: [integration],
+      headers: {},
+    });
+    queryClient.setQueryData(channelsOptions.queryKey, {
+      json: {results: [channel]},
+      headers: {},
+    });
+    MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/integrations/',
+      match: [MockApiClient.matchQuery({integrationType: 'messaging'})],
+      body: [],
+    });
+    MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/integrations/15/channels/',
+      body: {results: [channel]},
+    });
+    const onMessagingSetupChange = jest.fn();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ScmMessaging
+          messagingSetup={selectedMessagingSetup}
+          onMessagingSetupChange={onMessagingSetupChange}
+          selectedPlatform={selectedPlatform}
+        />
+      </QueryClientProvider>
+    );
+
+    expect(screen.queryByText('Destination selected')).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "We couldn't find the saved integration. Choose a destination again."
+      )
+    ).toBeInTheDocument();
+    expect(onMessagingSetupChange).toHaveBeenCalledWith({mode: 'unconfigured'});
   });
 });

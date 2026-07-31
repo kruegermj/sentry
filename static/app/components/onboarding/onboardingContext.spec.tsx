@@ -121,6 +121,37 @@ describe('OnboardingContextProvider', () => {
 
     expect(screen.getByText('messaging:selected')).toBeInTheDocument();
   });
+
+  it('preserves messaging setup when clearing the selected platform', async () => {
+    render(
+      <OnboardingContextProvider
+        initialValue={{
+          selectedPlatform: platform,
+          messagingSetup: {
+            mode: 'selected',
+            providerKey: 'slack',
+            integrationId: '15',
+            channelId: 'C123',
+          },
+        }}
+      >
+        <StateConsumer />
+      </OnboardingContextProvider>
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: 'Clear platform'}));
+
+    expect(screen.getByText('no-platform')).toBeInTheDocument();
+    expect(screen.getByText('messaging:selected')).toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem('onboarding') ?? '{}')).toMatchObject({
+      messagingSetup: {
+        mode: 'selected',
+        providerKey: 'slack',
+        integrationId: '15',
+        channelId: 'C123',
+      },
+    });
+  });
 });
 
 describe('OnboardingContextProvider session semantics', () => {
