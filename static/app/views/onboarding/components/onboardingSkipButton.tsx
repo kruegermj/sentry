@@ -28,6 +28,11 @@ const SKIP_CONFIG_BY_STEP: Partial<Record<OnboardingStepId, SkipAnalyticsConfig>
     sidebarSource: 'targeted_onboarding_scm_platform_features_skip',
     referrer: 'onboarding-scm-platform-features-skip',
   },
+  [OnboardingStepId.SCM_MESSAGING]: {
+    // VDY-146 will add treatment-specific interaction analytics.
+    sidebarSource: 'onboarding_sidebar',
+    referrer: 'onboarding-scm-messaging-skip',
+  },
   [OnboardingStepId.SETUP_DOCS]: {
     sidebarSource: 'targeted_onboarding_first_event_footer_skip',
     referrer: 'onboarding-first-event-footer-skip',
