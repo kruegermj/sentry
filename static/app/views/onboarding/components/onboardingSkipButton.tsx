@@ -1,5 +1,6 @@
 import {LinkButton} from '@sentry/scraps/button';
 
+import {useOnboardingContext} from 'sentry/components/onboarding/onboardingContext';
 import {useOnboardingSidebar} from 'sentry/components/onboarding/useOnboardingSidebar';
 import {t} from 'sentry/locale';
 import {trackAnalytics} from 'sentry/utils/analytics';
@@ -39,6 +40,7 @@ interface OnboardingSkipButtonProps {
 
 export function OnboardingSkipButton({stepId}: OnboardingSkipButtonProps) {
   const organization = useOrganization();
+  const {resetOnboarding} = useOnboardingContext();
   const {activateSidebar} = useOnboardingSidebar();
 
   const config = SKIP_CONFIG_BY_STEP[stepId];
@@ -47,6 +49,7 @@ export function OnboardingSkipButton({stepId}: OnboardingSkipButtonProps) {
   }
 
   const handleClick = () => {
+    resetOnboarding();
     trackAnalytics('onboarding.scm_header_skip_clicked', {
       organization,
       step: stepId,
