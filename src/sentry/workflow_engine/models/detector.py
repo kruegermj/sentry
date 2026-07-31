@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from jsonschema import ValidationError
 
 from sentry.backup.scopes import RelocationScope
@@ -68,6 +69,23 @@ class DetectorManager(BaseManager["Detector"]):
         way to query detectors.
         """
         return self.get_queryset().filter(grouptype.registry.get_detector_type_filters())
+
+    def by_organization(self, organization_id: int) -> BaseQuerySet[Detector]:
+        """
+        Returns a queryset of detectors scoped to the given organization.
+        Project-scoped detectors are matched via project__organization.
+        Null-project (all-projects) detectors are matched via config__organization_id.
+        """
+        from sentry.workflow_engine.typings.grouptype import IssueStreamGroupType
+
+        return self.get_queryset().filter(
+            Q(project__organization_id=organization_id)
+            | Q(
+                project__isnull=True,
+                type=IssueStreamGroupType.slug,
+                config__organization_id=organization_id,
+            )
+        )
 
 
 @cell_silo_model
