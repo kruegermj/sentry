@@ -121,11 +121,18 @@ describe('OnboardingContextProvider', () => {
 
     expect(screen.getByText('messaging:selected')).toBeInTheDocument();
   });
+});
 
-  it('preserves messaging setup when clearing the selected platform', async () => {
+describe('OnboardingContextProvider session semantics', () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it('keeps the rest of the session when clearing the selected platform', async () => {
     render(
       <OnboardingContextProvider
         initialValue={{
+          selectedRepository: RepositoryFixture({id: '42'}),
           selectedPlatform: platform,
           messagingSetup: {
             mode: 'selected',
@@ -141,45 +148,21 @@ describe('OnboardingContextProvider', () => {
 
     await userEvent.click(screen.getByRole('button', {name: 'Clear platform'}));
 
+    // Clearing one field must stay local to that field. This previously routed
+    // through removeOnboarding and wiped the whole session, taking the connected
+    // repository with it. Messaging destinations are organization-scoped, so they
+    // must survive a platform change too.
     expect(screen.getByText('no-platform')).toBeInTheDocument();
+    expect(screen.getByText('repo:42')).toBeInTheDocument();
     expect(screen.getByText('messaging:selected')).toBeInTheDocument();
     expect(JSON.parse(sessionStorage.getItem('onboarding') ?? '{}')).toMatchObject({
+      selectedRepository: {id: '42'},
       messagingSetup: {
         mode: 'selected',
         providerKey: 'slack',
         integrationId: '15',
         channelId: 'C123',
       },
-    });
-  });
-});
-
-describe('OnboardingContextProvider session semantics', () => {
-  afterEach(() => {
-    window.sessionStorage.clear();
-  });
-
-  it('keeps the rest of the session when clearing the selected platform', async () => {
-    render(
-      <OnboardingContextProvider
-        initialValue={{
-          selectedRepository: RepositoryFixture({id: '42'}),
-          selectedPlatform: platform,
-        }}
-      >
-        <StateConsumer />
-      </OnboardingContextProvider>
-    );
-
-    await userEvent.click(screen.getByRole('button', {name: 'Clear platform'}));
-
-    // Clearing one field must stay local to that field. This previously routed
-    // through removeOnboarding and wiped the whole session, taking the
-    // connected repository with it.
-    expect(screen.getByText('no-platform')).toBeInTheDocument();
-    expect(screen.getByText('repo:42')).toBeInTheDocument();
-    expect(JSON.parse(sessionStorage.getItem('onboarding') ?? '{}')).toMatchObject({
-      selectedRepository: {id: '42'},
     });
   });
 

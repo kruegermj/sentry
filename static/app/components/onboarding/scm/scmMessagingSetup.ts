@@ -1,4 +1,4 @@
-export type ScmMessagingProviderKey = 'discord' | 'msteams' | 'slack';
+type ScmMessagingProviderKey = 'discord' | 'msteams' | 'slack';
 
 export type ScmMessagingSetup =
   | {mode: 'unconfigured'}

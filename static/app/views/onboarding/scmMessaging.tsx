@@ -38,8 +38,11 @@ interface ScmMessagingProps {
  * Revalidates the organization-scoped identifiers stored in session state.
  * A restored selection is not usable until both queries succeed and resolve
  * the saved integration and channel.
+ *
+ * File-local by design: VDY-143 will lift this out once the inline destination
+ * picker needs it. Exporting it before it has a second consumer trips knip.
  */
-export function useScmMessagingSetupValidation({
+function useScmMessagingSetupValidation({
   messagingSetup,
   onMessagingSetupChange,
 }: Pick<ScmMessagingProps, 'messagingSetup' | 'onMessagingSetupChange'>) {
@@ -118,6 +121,15 @@ export function useScmMessagingSetupValidation({
       return;
     }
 
+    // Every provider helper in organization_integration_channels.py returns an
+    // empty list when the upstream API call fails, so `results: []` cannot be
+    // told apart from "the saved channel was deleted". Treating it as stale
+    // would discard a valid destination on a transient Slack/Discord outage,
+    // so leave the selection alone and let isValid keep it non-submittable.
+    if (channelsQuery.data.results.length === 0) {
+      return;
+    }
+
     if (!channel) {
       setStaleReason('channel');
       onMessagingSetupChange({mode: 'unconfigured'});
@@ -128,8 +140,14 @@ export function useScmMessagingSetupValidation({
     if (channelName !== messagingSetup.channelName) {
       onMessagingSetupChange({...messagingSetup, channelName});
     }
+    // `messagingSetup` stays in the deps because the spread above needs the whole
+    // object. This effect writes a new object through onMessagingSetupChange, so
+    // it re-runs on its own write and only settles because the channelName
+    // comparison becomes false. Any future field written unconditionally here
+    // turns that fixed point into a session-storage write loop.
   }, [
     channel,
+    channelsQuery.data,
     channelsQuery.isSuccess,
     integration,
     integrationsQuery.isSuccess,

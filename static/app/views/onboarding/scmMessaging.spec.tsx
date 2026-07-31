@@ -95,9 +95,11 @@ describe('ScmMessaging', () => {
       match: [MockApiClient.matchQuery({integrationType: 'messaging'})],
       body: [OrganizationIntegrationsFixture({id: '15'})],
     });
+    // A populated list that does not contain the saved channel is genuine
+    // staleness: the channel was deleted or renamed away.
     MockApiClient.addMockResponse({
       url: '/organizations/org-slug/integrations/15/channels/',
-      body: {results: []},
+      body: {results: [{id: 'C999', name: 'general', display: '#general'}]},
     });
     const onMessagingSetupChange = jest.fn();
 
@@ -110,6 +112,36 @@ describe('ScmMessaging', () => {
     ).toBeInTheDocument();
     expect(onMessagingSetupChange).toHaveBeenCalledWith({mode: 'unconfigured'});
     expect(screen.queryByText('Destination selected')).not.toBeInTheDocument();
+  });
+
+  it('keeps the saved destination when the channel list comes back empty', async () => {
+    MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/integrations/',
+      match: [MockApiClient.matchQuery({integrationType: 'messaging'})],
+      body: [OrganizationIntegrationsFixture({id: '15'})],
+    });
+    // Every provider helper returns [] when the upstream API fails, so an empty
+    // list is indistinguishable from an outage and must not discard the
+    // selection. It stays non-submittable rather than being reset.
+    MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/integrations/15/channels/',
+      body: {results: []},
+    });
+    const onMessagingSetupChange = jest.fn();
+
+    renderMessaging(onMessagingSetupChange);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Checking saved destination')).not.toBeInTheDocument();
+    });
+
+    expect(onMessagingSetupChange).not.toHaveBeenCalled();
+    expect(screen.queryByText('Destination selected')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "We couldn't find the saved channel. Choose a destination again."
+      )
+    ).not.toBeInTheDocument();
   });
 
   it('does not trust a cached destination while revalidating it', async () => {
