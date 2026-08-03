@@ -1,7 +1,8 @@
-import {useEffect, useMemo} from 'react';
+import {Fragment, useEffect, useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import {mergeProps} from '@react-aria/utils';
 
+import {ButtonBar} from '@sentry/scraps/button';
 import {Flex} from '@sentry/scraps/layout';
 import {SizeProvider} from '@sentry/scraps/sizeContext';
 import {slot, withSlots} from '@sentry/scraps/slot';
@@ -11,6 +12,7 @@ import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SearchButton} from 'sentry/views/navigation/searchButton';
+import {TopBarOverflowMenu} from 'sentry/views/navigation/topBarOverflowMenu';
 import {
   useIsSearchInMobileRow,
   useTopBarActionSize,
@@ -37,7 +39,11 @@ function TopBarContent() {
   const {pageContentTop} = useTopOffset();
 
   const organization = useOrganization({allowNull: true});
-  const hasExpandedActions = useTopBarActionSize() === 'full';
+  const actionSize = useTopBarActionSize();
+  const hasExpandedActions = actionSize === 'full';
+  // Once collapsed, Ask Seer and Give Feedback fold into an overflow menu that
+  // pairs with search in a button bar.
+  const isCollapsed = actionSize === 'collapsed';
   // When collapsed, search moves into the mobile navigation row.
   const isSearchInMobileRow = useIsSearchInMobileRow();
 
@@ -127,25 +133,48 @@ function TopBarContent() {
             {props => <Flex {...props} align="center" gap="sm" />}
           </Slot.Outlet>
 
+          {/*
+           * Stays inline at every size — its icon carries live state (thinking
+           * loader, unread indicator) that a menu item can't convey.
+           */}
           {isSeerExplorerEnabled(organization) ? <AskSeerButton /> : null}
-          {isSearchInMobileRow ? null : <SearchButton />}
+          {isSearchInMobileRow || isCollapsed ? null : <SearchButton />}
 
+          {/*
+           * Both layouts live inside this outlet so they can read `hasConsumers`
+           * — a page-registered feedback trigger stays inline and must not also
+           * be offered in the overflow menu.
+           */}
           <Slot.Outlet name="feedback">
-            {props => (
-              <Flex {...props}>
-                {/* If no component registers a feedback button, show the default one */}
-                <Slot.Fallback>
-                  <FeedbackButton
-                    variant={hasExpandedActions ? undefined : 'transparent'}
-                    aria-label={t('Give Feedback')}
-                    feedbackOptions={feedbackOptions}
-                    tooltipProps={{title: t('Give Feedback')}}
-                  >
-                    {null}
-                  </FeedbackButton>
-                </Slot.Fallback>
-              </Flex>
-            )}
+            {(props, hasConsumers) =>
+              isCollapsed ? (
+                <Fragment>
+                  <ButtonBar>
+                    {isSearchInMobileRow ? null : <SearchButton />}
+                    <TopBarOverflowMenu
+                      includeFeedback={!hasConsumers}
+                      feedbackOptions={feedbackOptions}
+                    />
+                  </ButtonBar>
+                  {/* Page-registered triggers still portal in here. */}
+                  <Flex {...props} />
+                </Fragment>
+              ) : (
+                <Flex {...props}>
+                  {/* If no component registers a feedback button, show the default one */}
+                  <Slot.Fallback>
+                    <FeedbackButton
+                      variant={hasExpandedActions ? undefined : 'transparent'}
+                      aria-label={t('Give Feedback')}
+                      feedbackOptions={feedbackOptions}
+                      tooltipProps={{title: t('Give Feedback')}}
+                    >
+                      {null}
+                    </FeedbackButton>
+                  </Slot.Fallback>
+                </Flex>
+              )
+            }
           </Slot.Outlet>
         </Flex>
       </SizeProvider>
