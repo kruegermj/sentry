@@ -1,4 +1,3 @@
-import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -12,18 +11,17 @@ import {
 } from 'sentry/components/commandPalette/ui/commandPaletteStateContext';
 import {IconSearch} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {useMedia} from 'sentry/utils/useMedia';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useHasExpandedTopBarActions} from 'sentry/views/navigation/useHasExpandedTopBarActions';
 import {useSeerExplorerContext} from 'sentry/views/seerExplorer/useSeerExplorerContext';
 import {isSeerExplorerEnabled} from 'sentry/views/seerExplorer/utils';
 
 export function SearchButton() {
-  const theme = useTheme();
   const organization = useOrganization({allowNull: true});
   const state = useCommandPaletteState();
   const dispatch = useCommandPaletteDispatch();
   const {openSeerExplorer} = useSeerExplorerContext();
-  const isDesktop = useMedia(`(min-width: ${theme.breakpoints.md})`);
+  const showLabel = useHasExpandedTopBarActions();
 
   return (
     <StyledButton
@@ -44,7 +42,7 @@ export function SearchButton() {
         );
       }}
     >
-      {isDesktop ? (
+      {showLabel ? (
         <Flex align="center" gap="sm">
           {t('Search')}
           <Hotkey value="mod+k" variant="debossed" />

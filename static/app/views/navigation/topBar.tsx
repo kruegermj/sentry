@@ -11,6 +11,7 @@ import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SearchButton} from 'sentry/views/navigation/searchButton';
+import {useHasExpandedTopBarActions} from 'sentry/views/navigation/useHasExpandedTopBarActions';
 import {useTopOffset} from 'sentry/views/navigation/useTopOffset';
 import {AskSeerButton} from 'sentry/views/seerExplorer/components/askSeerButton';
 import {useSeerExplorerChatState} from 'sentry/views/seerExplorer/seerExplorerChatStateContext';
@@ -33,6 +34,7 @@ function TopBarContent() {
   const {pageContentTop} = useTopOffset();
 
   const organization = useOrganization({allowNull: true});
+  const hasExpandedActions = useHasExpandedTopBarActions();
 
   useEffect(() => {
     document.documentElement.style.setProperty(TOP_BAR_HEIGHT_CSS_VAR, pageContentTop);
@@ -120,8 +122,8 @@ function TopBarContent() {
             {props => <Flex {...props} align="center" gap="sm" />}
           </Slot.Outlet>
 
-          <SearchButton />
           {isSeerExplorerEnabled(organization) ? <AskSeerButton /> : null}
+          <SearchButton />
 
           <Slot.Outlet name="feedback">
             {props => (
@@ -129,6 +131,7 @@ function TopBarContent() {
                 {/* If no component registers a feedback button, show the default one */}
                 <Slot.Fallback>
                   <FeedbackButton
+                    variant={hasExpandedActions ? undefined : 'transparent'}
                     aria-label={t('Give Feedback')}
                     feedbackOptions={feedbackOptions}
                     tooltipProps={{title: t('Give Feedback')}}

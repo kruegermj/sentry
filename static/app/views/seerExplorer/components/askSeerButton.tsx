@@ -10,12 +10,14 @@ import {Text} from '@sentry/scraps/text';
 
 import {IconSeer} from 'sentry/icons';
 import {t} from 'sentry/locale';
+import {useHasExpandedTopBarActions} from 'sentry/views/navigation/useHasExpandedTopBarActions';
 import {useSeerExplorerContext} from 'sentry/views/seerExplorer/useSeerExplorerContext';
 
 export function AskSeerButton() {
   const {isOpen, toggleSeerExplorer, sessionState: state} = useSeerExplorerContext();
   const showMessageIndicator = !isOpen && state === 'done-thinking';
   const prefersReducedMotion = useReducedMotion();
+  const showHotkey = useHasExpandedTopBarActions();
 
   return (
     <SeerButton
@@ -42,9 +44,7 @@ export function AskSeerButton() {
           visibility={state === 'thinking' ? 'hidden' : undefined}
         >
           <Container>{t('Ask Seer')}</Container>
-          <Container display={{'screen:xs': 'none', 'screen:md': 'inline-block'}}>
-            <Hotkey value="mod+/" variant="debossed" />
-          </Container>
+          {showHotkey ? <Hotkey value="mod+/" variant="debossed" /> : null}
         </Flex>
         {state === 'thinking' ? (
           <SeerLoader
