@@ -10,16 +10,14 @@ import {Text} from '@sentry/scraps/text';
 
 import {IconSeer} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {useTopBarActionSize} from 'sentry/views/navigation/useTopBarActionSize';
+import {useHasCollapsedTopBarActions} from 'sentry/views/navigation/useHasCollapsedTopBarActions';
 import {useSeerExplorerContext} from 'sentry/views/seerExplorer/useSeerExplorerContext';
 
 export function AskSeerButton() {
   const {isOpen, toggleSeerExplorer, sessionState: state} = useSeerExplorerContext();
   const showMessageIndicator = !isOpen && state === 'done-thinking';
   const prefersReducedMotion = useReducedMotion();
-  const size = useTopBarActionSize();
-  const showLabel = size !== 'collapsed';
-  const showHotkey = size === 'full';
+  const showLabel = !useHasCollapsedTopBarActions();
 
   return (
     <SeerButton
@@ -65,7 +63,7 @@ export function AskSeerButton() {
             visibility={state === 'thinking' ? 'hidden' : undefined}
           >
             <Container>{t('Ask Seer')}</Container>
-            {showHotkey ? <Hotkey value="mod+/" variant="debossed" /> : null}
+            <Hotkey value="mod+/" variant="debossed" />
           </Flex>
           {/*
            * Overlays the hidden label so the button keeps its width while

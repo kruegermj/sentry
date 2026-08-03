@@ -12,7 +12,7 @@ import {
 import {IconSearch} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
-import {useTopBarActionSize} from 'sentry/views/navigation/useTopBarActionSize';
+import {useHasCollapsedTopBarActions} from 'sentry/views/navigation/useHasCollapsedTopBarActions';
 import {useSeerExplorerContext} from 'sentry/views/seerExplorer/useSeerExplorerContext';
 import {isSeerExplorerEnabled} from 'sentry/views/seerExplorer/utils';
 
@@ -21,7 +21,7 @@ export function SearchButton() {
   const state = useCommandPaletteState();
   const dispatch = useCommandPaletteDispatch();
   const {openSeerExplorer} = useSeerExplorerContext();
-  const showLabel = useTopBarActionSize() === 'full';
+  const showLabel = !useHasCollapsedTopBarActions();
 
   return (
     <StyledButton

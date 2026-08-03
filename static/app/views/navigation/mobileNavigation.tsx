@@ -25,7 +25,6 @@ import {SearchButton} from 'sentry/views/navigation/searchButton';
 import {SecondaryNavigation} from 'sentry/views/navigation/secondary/components';
 import {SecondaryNavigationContent} from 'sentry/views/navigation/secondary/content';
 import {useSecondaryNavigation} from 'sentry/views/navigation/secondaryNavigationContext';
-import {useIsSearchInMobileRow} from 'sentry/views/navigation/useTopBarActionSize';
 
 function MobileNavigationHeader(props: FlexProps<'header'>) {
   const theme = useTheme();
@@ -79,9 +78,6 @@ export function MobileNavigation() {
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const {view, setView} = useSecondaryNavigation();
   const scrollLock = useScrollLock(document.getElementById('main')!);
-  // The TopBar hides its own search trigger when this is true, so search shows
-  // up exactly once. Search takes What's New's place rather than growing the row.
-  const showSearch = useIsSearchInMobileRow();
 
   useEffect(() => {
     const main = document.getElementById('main');
@@ -141,9 +137,12 @@ export function MobileNavigation() {
           />
           <Stack gap="md" direction="row">
             <PrimaryNavigation.ButtonBar orientation="horizontal">
-              <PrimaryNavigationFooterItems
-                searchTrigger={showSearch ? <SearchButton /> : null}
-              />
+              {/*
+               * This row only exists in the mobile layout, which is exactly when
+               * the TopBar drops its own search trigger — so search always
+               * belongs here, and appears exactly once.
+               */}
+              <PrimaryNavigationFooterItems searchTrigger={<SearchButton />} />
             </PrimaryNavigation.ButtonBar>
             <PrimaryNavigationFooterItemsUserDropdown />
           </Stack>

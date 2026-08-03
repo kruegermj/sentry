@@ -3,7 +3,7 @@ import {Outlet, ScrollRestoration} from 'react-router-dom';
 import styled from '@emotion/styled';
 
 import {GlobalDrawer} from '@sentry/scraps/drawer';
-import {ContainerQueryProvider, Container, Flex, Stack} from '@sentry/scraps/layout';
+import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {PictureInPictureProvider} from '@sentry/scraps/pictureInPicture';
 
 import {DemoHeader} from 'sentry/components/demo/demoHeader';
@@ -90,7 +90,6 @@ function AppDrawers() {
 function AppLayout({organization}: LayoutProps) {
   useSeerExplorerDocumentTitle();
   const pageBannerRef = useRef<HTMLDivElement>(null);
-  const contentStackRef = useRef<HTMLDivElement>(null);
   const {height: pageBannerHeight} = useDimensions({
     elementRef: pageBannerRef,
   });
@@ -115,46 +114,29 @@ function AppLayout({organization}: LayoutProps) {
           direction={{'screen:sm': 'column', 'screen:md': 'row'}}
           position="relative"
         >
-          {/*
-           * Broadcasts `#main`'s container breakpoint to the navigation as well
-           * as the content, so the TopBar and the mobile navigation row — which
-           * are siblings, not ancestor/descendant — agree on how much room the
-           * action triggers have. Without this the mobile row has no query
-           * container and always resolves to `zero`, so it would render a search
-           * trigger the TopBar was also still showing.
-           *
-           * Note: inside this provider but outside `ContentStack` there is no
-           * CSS query container, so JS resolves container breakpoints while CSS
-           * `@container` rules fall back to their base value. Bare-key
-           * responsive props in the navigation must therefore be JS-resolved
-           * (`useResponsivePropValue`), not CSS-resolved.
-           */}
-          <ContainerQueryProvider elementRef={contentStackRef}>
-            <Navigation pageBannerHeight={pageBannerHeight} />
-            <SeerExplorerSidebarLayout>
-              {/* The `#main` selector is used to make the app content `inert` when an overlay is active */}
-              <ContentStack
-                ref={contentStackRef}
-                id="main"
-                tabIndex={-1}
-                flex="1"
-                minWidth="0"
-                background="secondary"
-                containerType="inline-size"
-              >
-                <DemoHeader />
-                {organization && <OrganizationHeader organization={organization} />}
-                <OrganizationDetailsBody>
-                  <TopBar.Slot.Provider>
-                    <TopBar />
-                    <Layout.Page>
-                      <Outlet />
-                    </Layout.Page>
-                  </TopBar.Slot.Provider>
-                </OrganizationDetailsBody>
-              </ContentStack>
-            </SeerExplorerSidebarLayout>
-          </ContainerQueryProvider>
+          <Navigation pageBannerHeight={pageBannerHeight} />
+          <SeerExplorerSidebarLayout>
+            {/* The `#main` selector is used to make the app content `inert` when an overlay is active */}
+            <ContentStack
+              id="main"
+              tabIndex={-1}
+              flex="1"
+              minWidth="0"
+              background="secondary"
+              containerType="inline-size"
+            >
+              <DemoHeader />
+              {organization && <OrganizationHeader organization={organization} />}
+              <OrganizationDetailsBody>
+                <TopBar.Slot.Provider>
+                  <TopBar />
+                  <Layout.Page>
+                    <Outlet />
+                  </Layout.Page>
+                </TopBar.Slot.Provider>
+              </OrganizationDetailsBody>
+            </ContentStack>
+          </SeerExplorerSidebarLayout>
         </Flex>
       </Stack>
       {organization ? <AppDrawers /> : null}
