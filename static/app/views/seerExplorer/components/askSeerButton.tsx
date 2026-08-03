@@ -27,14 +27,15 @@ export function AskSeerButton() {
       onClick={toggleSeerExplorer}
       aria-label={state === 'thinking' ? t('Seer is thinking...') : t('Ask Seer')}
       aria-expanded={isOpen ? true : undefined}
-      // Surfaces whichever of the label and hotkey the current size hides.
+      // Names the button only when it's a bare icon; with the label inline the
+      // button already says what it is.
       tooltipProps={
-        showHotkey
+        showLabel
           ? undefined
           : {
               title: (
                 <Flex align="center" gap="sm">
-                  {showLabel ? null : t('Ask Seer')}
+                  {t('Ask Seer')}
                   <Hotkey value="mod+/" />
                 </Flex>
               ),
