@@ -28,6 +28,19 @@ export function SearchButton() {
       variant="secondary"
       icon={<IconSearch size="xs" />}
       aria-label={t('Search')}
+      // Only when the label and its inline hotkey aren't already visible.
+      tooltipProps={
+        showLabel
+          ? undefined
+          : {
+              title: (
+                <Flex align="center" gap="sm">
+                  {t('Search')}
+                  <Hotkey value="mod+k" />
+                </Flex>
+              ),
+            }
+      }
       onClick={() => {
         if (!organization) {
           return;
