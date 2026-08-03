@@ -11,7 +11,10 @@ import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SearchButton} from 'sentry/views/navigation/searchButton';
-import {useHasExpandedTopBarActions} from 'sentry/views/navigation/useHasExpandedTopBarActions';
+import {
+  useIsSearchInMobileRow,
+  useTopBarActionSize,
+} from 'sentry/views/navigation/useTopBarActionSize';
 import {useTopOffset} from 'sentry/views/navigation/useTopOffset';
 import {AskSeerButton} from 'sentry/views/seerExplorer/components/askSeerButton';
 import {useSeerExplorerChatState} from 'sentry/views/seerExplorer/seerExplorerChatStateContext';
@@ -34,7 +37,9 @@ function TopBarContent() {
   const {pageContentTop} = useTopOffset();
 
   const organization = useOrganization({allowNull: true});
-  const hasExpandedActions = useHasExpandedTopBarActions();
+  const hasExpandedActions = useTopBarActionSize() === 'full';
+  // When collapsed, search moves into the mobile navigation row.
+  const isSearchInMobileRow = useIsSearchInMobileRow();
 
   useEffect(() => {
     document.documentElement.style.setProperty(TOP_BAR_HEIGHT_CSS_VAR, pageContentTop);
@@ -123,7 +128,7 @@ function TopBarContent() {
           </Slot.Outlet>
 
           {isSeerExplorerEnabled(organization) ? <AskSeerButton /> : null}
-          <SearchButton />
+          {isSearchInMobileRow ? null : <SearchButton />}
 
           <Slot.Outlet name="feedback">
             {props => (

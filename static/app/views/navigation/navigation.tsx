@@ -281,10 +281,20 @@ export function PrimaryNavigationItems({listRef}: PrimaryNavigationItemsProps) {
   );
 }
 
+interface PrimaryNavigationFooterItemsProps {
+  /**
+   * Rendered in What's New's place, replacing it. The mobile navigation row
+   * passes the search trigger here when the TopBar is too narrow to hold it.
+   */
+  searchTrigger?: React.ReactNode;
+}
+
 /**
  * Returns the list of items from the footer of the primary navigation
  */
-export function PrimaryNavigationFooterItems() {
+export function PrimaryNavigationFooterItems({
+  searchTrigger,
+}: PrimaryNavigationFooterItemsProps = {}) {
   const organization = useOrganization();
 
   return (
@@ -304,10 +314,13 @@ export function PrimaryNavigationFooterItems() {
       <ErrorBoundary customComponent={null}>
         <PrimaryNavigationServiceIncidents />
       </ErrorBoundary>
-      <ErrorBoundary customComponent={null}>
-        <PrimaryNavigationWhatsNew />
-      </ErrorBoundary>
-      <PrimaryNavigationHelpMenu />
+      {searchTrigger ?? (
+        <ErrorBoundary customComponent={null}>
+          <PrimaryNavigationWhatsNew />
+        </ErrorBoundary>
+      )}
+      {/* Broadcasts move into this menu when search takes the What's New slot */}
+      <PrimaryNavigationHelpMenu includeWhatsNew={!!searchTrigger} />
     </Fragment>
   );
 }

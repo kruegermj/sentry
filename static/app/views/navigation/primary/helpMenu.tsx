@@ -1,9 +1,11 @@
-import {useEffect} from 'react';
+import {Fragment, useEffect} from 'react';
 
 import {Flex} from '@sentry/scraps/layout';
 
+import {openModal} from 'sentry/actionCreators/modal';
 import type {MenuItemProps} from 'sentry/components/dropdownMenu';
 import {
+  IconBroadcast,
   IconBuilding,
   IconDiscord,
   IconDocs,
@@ -26,18 +28,60 @@ import {showIntercom} from 'sentry/utils/intercom';
 import {useFeedbackForm} from 'sentry/utils/useFeedbackForm';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {PrimaryNavigation} from 'sentry/views/navigation/primary/components';
+import {
+  useWhatsNewBroadcasts,
+  WhatsNewContent,
+} from 'sentry/views/navigation/primary/whatsNew';
 
-export function PrimaryNavigationHelpMenu() {
+interface PrimaryNavigationHelpMenuProps {
+  /**
+   * Adds a What's New entry to the menu and surfaces its unread indicator on the
+   * trigger. Set when the navigation row has no room for the standalone What's
+   * New button, so this menu becomes the only way to reach broadcasts.
+   */
+  includeWhatsNew?: boolean;
+}
+
+export function PrimaryNavigationHelpMenu({
+  includeWhatsNew = false,
+}: PrimaryNavigationHelpMenuProps = {}) {
   const organization = useOrganization();
   const contactSupportItem = getContactSupportItem(organization);
   const openForm = useFeedbackForm();
   const {privacyUrl, termsUrl} = useLegacyStore(ConfigStore);
+  const {isPending, unseenPostIds, uniqueBroadcasts} = useWhatsNewBroadcasts({
+    enabled: includeWhatsNew,
+  });
 
   useEffect(() => {
     trackAnalytics('intercom_link.viewed', {organization, source: 'sidebar'});
   }, [organization]);
 
   const items: MenuItemProps[] = [
+    {
+      key: 'whats-new',
+      label: t("What's New"),
+      hidden: !includeWhatsNew,
+      leadingItems: (
+        <MenuIcon>
+          <IconBroadcast />
+        </MenuIcon>
+      ),
+      onAction() {
+        openModal(({Header, Body}) => (
+          <Fragment>
+            <Header closeButton>{t("What's New")}</Header>
+            <Body>
+              <WhatsNewContent
+                unseenPostIds={unseenPostIds}
+                isPending={isPending}
+                broadcasts={uniqueBroadcasts}
+              />
+            </Body>
+          </Fragment>
+        ));
+      },
+    },
     {
       key: 'resources',
       label: t('Resources'),
@@ -199,6 +243,7 @@ export function PrimaryNavigationHelpMenu() {
       analyticsKey="help"
       label={t('Help')}
       icon={<IconEllipsis />}
+      indicator={includeWhatsNew && unseenPostIds.length > 0 ? 'accent' : undefined}
     />
   );
 }
