@@ -10,14 +10,14 @@ import {Text} from '@sentry/scraps/text';
 
 import {IconSeer} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {useHasCollapsedTopBarActions} from 'sentry/views/navigation/useHasCollapsedTopBarActions';
+import {useShouldShowTopBarActionLabels} from 'sentry/views/navigation/useShouldShowTopBarActionLabels';
 import {useSeerExplorerContext} from 'sentry/views/seerExplorer/useSeerExplorerContext';
 
 export function AskSeerButton() {
   const {isOpen, toggleSeerExplorer, sessionState: state} = useSeerExplorerContext();
   const showMessageIndicator = !isOpen && state === 'done-thinking';
   const prefersReducedMotion = useReducedMotion();
-  const showLabel = !useHasCollapsedTopBarActions();
+  const showLabel = useShouldShowTopBarActionLabels();
 
   return (
     <SeerButton
@@ -25,8 +25,6 @@ export function AskSeerButton() {
       onClick={toggleSeerExplorer}
       aria-label={state === 'thinking' ? t('Seer is thinking...') : t('Ask Seer')}
       aria-expanded={isOpen ? true : undefined}
-      // Names the button only when it's a bare icon; with the label inline the
-      // button already says what it is.
       tooltipProps={
         showLabel
           ? undefined
@@ -50,7 +48,6 @@ export function AskSeerButton() {
                   : undefined
             }
           />
-          {/* Anchored to the icon when there is no label to hang it off of. */}
           {showMessageIndicator && !showLabel ? <MessageIndicator /> : null}
         </Flex>
       }
@@ -65,12 +62,6 @@ export function AskSeerButton() {
             <Container>{t('Ask Seer')}</Container>
             <Hotkey value="mod+/" variant="debossed" />
           </Flex>
-          {/*
-           * Overlays the hidden label so the button keeps its width while
-           * thinking. Only rendered with the label — collapsed to an icon there
-           * is no box to overlay, and the icon's own `loading` animation
-           * already conveys the state.
-           */}
           {state === 'thinking' ? (
             <SeerLoader
               position="absolute"

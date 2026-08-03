@@ -11,7 +11,7 @@ import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SearchButton} from 'sentry/views/navigation/searchButton';
-import {useHasCollapsedTopBarActions} from 'sentry/views/navigation/useHasCollapsedTopBarActions';
+import {useShouldShowTopBarActionLabels} from 'sentry/views/navigation/useShouldShowTopBarActionLabels';
 import {useTopOffset} from 'sentry/views/navigation/useTopOffset';
 import {AskSeerButton} from 'sentry/views/seerExplorer/components/askSeerButton';
 import {useSeerExplorerChatState} from 'sentry/views/seerExplorer/seerExplorerChatStateContext';
@@ -34,9 +34,9 @@ function TopBarContent() {
   const {pageContentTop} = useTopOffset();
 
   const organization = useOrganization({allowNull: true});
-  // Collapsed, the triggers are bare icons and search moves into the mobile
-  // navigation row, which renders it instead.
-  const hasCollapsedActions = useHasCollapsedTopBarActions();
+  // Without labels, the triggers are bare icons and search moves into the
+  // mobile navigation row, which renders it instead.
+  const showActionLabels = useShouldShowTopBarActionLabels();
 
   useEffect(() => {
     document.documentElement.style.setProperty(TOP_BAR_HEIGHT_CSS_VAR, pageContentTop);
@@ -144,7 +144,7 @@ function TopBarContent() {
           </Slot.Outlet>
 
           {isSeerExplorerEnabled(organization) ? <AskSeerButton /> : null}
-          {hasCollapsedActions ? null : <SearchButton />}
+          {showActionLabels ? <SearchButton /> : null}
 
           <Slot.Outlet name="feedback">
             {props => (
@@ -152,7 +152,7 @@ function TopBarContent() {
                 {/* If no component registers a feedback button, show the default one */}
                 <Slot.Fallback>
                   <FeedbackButton
-                    variant={hasCollapsedActions ? 'transparent' : undefined}
+                    variant={showActionLabels ? undefined : 'transparent'}
                     aria-label={t('Give Feedback')}
                     feedbackOptions={feedbackOptions}
                     tooltipProps={{title: t('Give Feedback')}}
