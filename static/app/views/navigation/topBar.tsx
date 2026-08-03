@@ -11,7 +11,10 @@ import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SearchButton} from 'sentry/views/navigation/searchButton';
-import {useShouldShowTopBarActionLabels} from 'sentry/views/navigation/useShouldShowTopBarActionLabels';
+import {
+  useIsSearchInMobileRow,
+  useTopBarActionSize,
+} from 'sentry/views/navigation/useTopBarActionSize';
 import {useTopOffset} from 'sentry/views/navigation/useTopOffset';
 import {AskSeerButton} from 'sentry/views/seerExplorer/components/askSeerButton';
 import {useSeerExplorerChatState} from 'sentry/views/seerExplorer/seerExplorerChatStateContext';
@@ -34,9 +37,8 @@ function TopBarContent() {
   const {pageContentTop} = useTopOffset();
 
   const organization = useOrganization({allowNull: true});
-  // Without labels, the triggers are bare icons and search moves into the
-  // mobile navigation row, which renders it instead.
-  const showActionLabels = useShouldShowTopBarActionLabels();
+  const actionSize = useTopBarActionSize();
+  const isSearchInMobileRow = useIsSearchInMobileRow();
 
   useEffect(() => {
     document.documentElement.style.setProperty(TOP_BAR_HEIGHT_CSS_VAR, pageContentTop);
@@ -143,8 +145,9 @@ function TopBarContent() {
             )}
           </Slot.Outlet>
 
+          {actionSize === 'full' && !isSearchInMobileRow ? <SearchButton /> : null}
           {isSeerExplorerEnabled(organization) ? <AskSeerButton /> : null}
-          {showActionLabels ? <SearchButton /> : null}
+          {actionSize !== 'full' && !isSearchInMobileRow ? <SearchButton /> : null}
 
           <Slot.Outlet name="feedback">
             {props => (
@@ -152,7 +155,7 @@ function TopBarContent() {
                 {/* If no component registers a feedback button, show the default one */}
                 <Slot.Fallback>
                   <FeedbackButton
-                    variant={showActionLabels ? undefined : 'transparent'}
+                    variant={actionSize === 'full' ? undefined : 'transparent'}
                     aria-label={t('Give Feedback')}
                     feedbackOptions={feedbackOptions}
                     tooltipProps={{title: t('Give Feedback')}}

@@ -12,7 +12,7 @@ import {
 import {IconSearch} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
-import {useShouldShowTopBarActionLabels} from 'sentry/views/navigation/useShouldShowTopBarActionLabels';
+import {useTopBarActionSize} from 'sentry/views/navigation/useTopBarActionSize';
 import {useSeerExplorerContext} from 'sentry/views/seerExplorer/useSeerExplorerContext';
 import {isSeerExplorerEnabled} from 'sentry/views/seerExplorer/utils';
 
@@ -21,7 +21,10 @@ export function SearchButton() {
   const state = useCommandPaletteState();
   const dispatch = useCommandPaletteDispatch();
   const {openSeerExplorer} = useSeerExplorerContext();
-  const showLabel = useShouldShowTopBarActionLabels();
+  const size = useTopBarActionSize();
+  // Unlike Ask Seer, Search stays icon-only at the medium size in the page
+  // frame spec. Its label and inline hotkey only fit in the full state.
+  const showLabel = size === 'full';
 
   return (
     <StyledButton
